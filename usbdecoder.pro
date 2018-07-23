@@ -6,6 +6,8 @@
 
 QT       += core gui network
 
+DEFINES += RUN_CAPTURED_LOG=0
+
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = usbdecoder
