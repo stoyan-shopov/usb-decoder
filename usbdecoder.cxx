@@ -1,3 +1,4 @@
+#include <QFileDialog>
 #include "usbdecoder.hxx"
 #include "ui_usbdecoder.h"
 
@@ -7,17 +8,42 @@ MainWindow::MainWindow(QWidget *parent) :
 {
 	ui->setupUi(this);
 
+	/*
 	USBLogDecoder * decoder = new USBLogDecoder;
 	decoder->moveToThread(& decoder_thread);
 	connect(& decoder_thread, & QThread::finished, decoder, & QObject::deleteLater);
 	connect(this, & MainWindow::runDecoder, decoder, & USBLogDecoder::runDecoder);
 	connect(decoder, & USBLogDecoder::outputReady, this, & MainWindow::readyReadUsbLogSocket);
 	decoder_thread.start();
+	*/
 
 	emit runDecoder("");
 
-	connect(ui->pushButtonConnect, & QPushButton::clicked, [=] { });
-	emit ui->pushButtonConnect->clicked();
+	statusBar()->showMessage("connecting...");
+
+	connect(& s, & QTcpSocket::connected, [=] { statusBar()->showMessage("connected"); });
+	connect(& s, & QTcpSocket::disconnected, [=] { statusBar()->showMessage("disconnected"); });
+	connect(& s, QOverload<QAbstractSocket::SocketError>::of(&QAbstractSocket::error),
+		[=](QAbstractSocket::SocketError socketError){ statusBar()->showMessage("error!!!"); });
+	connect(& s, & QTcpSocket::readyRead, [=] { usbLogData += s.readAll(); });
+
+	s.connectToHost("localhost", USB_LOG_TCP_PORT);
+
+	connect(ui->pushButtonConnect, & QPushButton::clicked,
+		[=] { auto s = USBLogDecoder::decode(usbLogData);
+		for (auto & l : s)
+			ui->plainTextEdit->appendPlainText(l);
+	});
+	connect(ui->pushButtonDecodeFile, & QPushButton::clicked,
+		[=] {
+		auto f = QFileDialog::getOpenFileName();
+		QFile x(f);
+		if (!x.open(QFile::ReadOnly))
+			return;
+		auto s = USBLogDecoder::decode(x.readAll());
+		for (auto & l : s)
+			ui->plainTextEdit->appendPlainText(l);
+	});
 }
 
 MainWindow::~MainWindow()
@@ -110,8 +136,8 @@ QString (*USBLogDecoder::decoders[255])(unsigned prefix_byte) =
 		[OhciRhDescriptorBReg_log_prefix_write]		= dummy_register_io_packet,
 		[OhciRhStatusReg_log_prefix_read]		= dummy_register_io_packet,
 		[OhciRhStatusReg_log_prefix_write]		= dummy_register_io_packet,
-		[OhciRhPortStatusReg_log_prefix_read]		= dummy_register_io_packet,
-		[OhciRhPortStatusReg_log_prefix_write]		= dummy_register_io_packet,
+		[OhciRhPortStatusReg_log_prefix_read]		= OhciRhPortStatusReg_access,
+		[OhciRhPortStatusReg_log_prefix_write]		= OhciRhPortStatusReg_access,
 
 		[0x4d]	= dummy,
 		[0x4e]	= dummy,
@@ -166,9 +192,18 @@ QString (*USBLogDecoder::decoders[255])(unsigned prefix_byte) =
 		[0x7f]	= dummy,
 
 		[TRANSFER_DESCRIPTOR_READY_LOG_PREFIX]		= log_transfer_descriptor,
+
+		[INTERRUPT_ENTRY_LOG_PREFIX]			=	dummy,
+		[INTERRUPT_EXIT_LOG_PREFIX]			=	dummy,
+		[INTERRUPT_TRANSFER_DONE_LOG_PREFIX]		=	dummy,
+		[INTERRUPT_START_OF_FRAME_LOG_PREFIX]		=	dummy,
+		[INTERRUPT_ROOT_HUB_EVENT_PREFIX]		=	dummy,
+		[HCCA_CONTENTS_LOG_PREFIX]			=	dump_hcca,
 };
 
 QTcpSocket * USBLogDecoder::s;
+QByteArray USBLogDecoder::data;
+int USBLogDecoder::dataIndex;
 QFile USBLogDecoder::f("usb-log-capture.out");
 
 void USBLogDecoder::runDecoder(const QString &parameters)
@@ -194,4 +229,22 @@ void USBLogDecoder::runDecoder(const QString &parameters)
 			emit outputReady(QString("UNDECODED PACKET: $%1").arg(h, 2, 16, QChar('0')));
 	}
 	emit outputReady("finished>>>");
+}
+
+QStringList USBLogDecoder::decode(const QByteArray &logData)
+{
+QStringList packets;
+int h;
+
+	data = logData;
+	dataIndex = 0;
+
+	if (!data.isEmpty()) while ((h = getByte()) != -1)
+	{
+		if (decoders[h])
+			packets << decoders[h](h);
+		else
+			packets << QString("UNDECODED PACKET: $%1").arg(h, 2, 16, QChar('0'));
+	}
+	return packets;
 }

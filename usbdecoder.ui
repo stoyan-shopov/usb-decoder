@@ -18,7 +18,14 @@
     <item>
      <widget class="QPushButton" name="pushButtonConnect">
       <property name="text">
-       <string>connect</string>
+       <string>decode captured data</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButtonDecodeFile">
+      <property name="text">
+       <string>decode file</string>
       </property>
      </widget>
     </item>
