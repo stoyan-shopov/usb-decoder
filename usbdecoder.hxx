@@ -90,6 +90,70 @@ class USBLogDecoder : public QObject
 		return QString("root hub port status access");
 	}
 
+	static QString log_irq_entry(unsigned) { return "IRQ entry"; }
+	static QString log_reg_access_OhciInterruptDisableReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		if (x & (1 << 0)) s += "SO - disable scheduling overrun interrupt; ";
+		if (x & (1 << 1)) s += "WDH - disable DoneHead Writeback interrupt; ";
+		if (x & (1 << 2)) s += "SF - disable start of frame interrupt; ";
+		if (x & (1 << 3)) s += "RD - disable resume detect interrupt; ";
+		if (x & (1 << 4)) s += "UE - disable unrecoverable error interrupt; ";
+		if (x & (1 << 5)) s += "FNO - disable frame number overflow interrupt; ";
+		if (x & (1 << 6)) s += "RHSC - disable root hub status change interrupt; ";
+		if (x & (1 << 30)) s += "OC - disable ownership change interrupt; ";
+		if (x & (1 << 31)) s += "MIE - MASTER INTERRUPT DISABLE; ";
+		return QString("HcInterruptDisable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciControlReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+
+		s += QString("CBSR (control-to-bulk service ration): %1; ").arg(x & 3);
+		s += "PLE: "; if (x & (1 << 2)) s += "periodic list enabled; "; else s += "periodic list disabled; ";
+		s += "IE: "; if (x & (1 << 3)) s += "isochronous enable; "; else s += "isochronous disabled; ";
+		s += "CLE: "; if (x & (1 << 4)) s += "control list enabled; "; else s += "control list disabled; ";
+		s += "BLE: "; if (x & (1 << 5)) s += "bulk list enabled; "; else s += "bulk list disabled; ";
+		s += "HCFS (host controller functional state): ";
+		switch ((x >> 6) & 3)
+		{
+			case 0: s += "USBReset; "; break;
+			case 1: s += "USBResume; "; break;
+			case 2: s += "USBOperational; "; break;
+			case 3: s += "USBSuspend; "; break;
+		}
+		s += "IR (interrupt routing): "; if (x & (1 << 8)) s += "SMM; "; else s += "none; ";
+		s += "RWC (remote wakeup connected): "; if (x & (1 << 9)) s += "yes; "; else s += "no; ";
+		s += "RWE (remote wakeup enable): "; if (x & (1 << 10)) s += "yes; "; else s += "no; ";
+		return QString("HcControl: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciCommandStatusReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+
+		s += "HCR (host controller reset): "; if (x & (1 << 0)) s += "RESET ON; "; else s += "0; ";
+		s += "CLF (control list filled): "; if (x & (1 << 1)) s += "yes; "; else s += "no; ";
+		s += "BLF (bulk list filled): "; if (x & (1 << 2)) s += "yes; "; else s += "no; ";
+		s += "OCR (ownership change request): "; if (x & (1 << 3)) s += "yes; "; else s += "no; ";
+		s += QString("SOC (scheduling overrun count): ").arg((x >> 16) & 3);
+
+		return QString("HcCommandStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_template(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += "XXX: "; if (x & (1 << 31)) s += "XXX; "; else s + "YYY";
+		return QString("XXX: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+
+	static QString log_irq_exit(unsigned) { return "IRQ exit"; }
+	static QString log_init_start(unsigned) { return "INIT start"; }
+	static QString log_init_end(unsigned) { return "INIT end"; }
+
 	static unsigned int getByte_socket(void) { uint8_t x; while (!s->bytesAvailable()) if (!s->waitForReadyRead(-1))
 		{ qDebug() << "ERROR!!!"; return -1; }
 if (s->read((char *) & x, 1) != 1) { qDebug() << "XXX"; return -1; } return x;

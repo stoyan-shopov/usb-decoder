@@ -96,16 +96,16 @@ QString (*USBLogDecoder::decoders[255])(unsigned prefix_byte) =
 
 		[OhciRevisionReg_log_prefix_read]		= dummy_register_io_packet,
 		[OhciRevisionReg_log_prefix_write]		= dummy_register_io_packet,
-		[OhciControlReg_log_prefix_read]		= dummy_register_io_packet,
-		[OhciControlReg_log_prefix_write]		= dummy_register_io_packet,
-		[OhciCommandStatusReg_log_prefix_read]		= dummy_register_io_packet,
-		[OhciCommandStatusReg_log_prefix_write]		= dummy_register_io_packet,
+		[OhciControlReg_log_prefix_read]		= log_reg_access_OhciControlReg,
+		[OhciControlReg_log_prefix_write]		= log_reg_access_OhciControlReg,
+		[OhciCommandStatusReg_log_prefix_read]		= log_reg_access_OhciCommandStatusReg,
+		[OhciCommandStatusReg_log_prefix_write]		= log_reg_access_OhciCommandStatusReg,
 		[OhciInterruptStatusReg_log_prefix_read]	= dummy_register_io_packet,
 		[OhciInterruptStatusReg_log_prefix_write]	= dummy_register_io_packet,
 		[OhciInterruptEnableReg_log_prefix_read]	= dummy_register_io_packet,
 		[OhciInterruptEnableReg_log_prefix_write]	= dummy_register_io_packet,
-		[OhciInterruptDisableReg_log_prefix_read]	= dummy_register_io_packet,
-		[OhciInterruptDisableReg_log_prefix_write]	= dummy_register_io_packet,
+		[OhciInterruptDisableReg_log_prefix_read]	= log_reg_access_OhciInterruptDisableReg,
+		[OhciInterruptDisableReg_log_prefix_write]	= log_reg_access_OhciInterruptDisableReg,
 		[OhciHCCAReg_log_prefix_read]			= dummy_register_io_packet,
 		[OhciHCCAReg_log_prefix_write]			= dummy_register_io_packet,
 		[OhciPeriodCurrentEDReg_log_prefix_read]	= dummy_register_io_packet,
@@ -193,12 +193,14 @@ QString (*USBLogDecoder::decoders[255])(unsigned prefix_byte) =
 
 		[TRANSFER_DESCRIPTOR_READY_LOG_PREFIX]		= log_transfer_descriptor,
 
-		[INTERRUPT_ENTRY_LOG_PREFIX]			=	dummy,
-		[INTERRUPT_EXIT_LOG_PREFIX]			=	dummy,
+		[INTERRUPT_ENTRY_LOG_PREFIX]			=	log_irq_entry,
+		[INTERRUPT_EXIT_LOG_PREFIX]			=	log_irq_exit,
 		[INTERRUPT_TRANSFER_DONE_LOG_PREFIX]		=	dummy,
 		[INTERRUPT_START_OF_FRAME_LOG_PREFIX]		=	dummy,
 		[INTERRUPT_ROOT_HUB_EVENT_PREFIX]		=	dummy,
 		[HCCA_CONTENTS_LOG_PREFIX]			=	dump_hcca,
+		[OHCI_INIT_START_LOG_PREFIX]			=	log_init_start,
+		[OHCI_INIT_END_LOG_PREFIX]			=	log_init_end,
 };
 
 QTcpSocket * USBLogDecoder::s;
