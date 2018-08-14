@@ -85,12 +85,42 @@ class USBLogDecoder : public QObject
 	 */
 	static QString OhciRhPortStatusReg_access(unsigned prefix_byte)
 	{
-		getByte();
-		getU32();
-		return QString("root hub port status access");
+		auto index = getByte();
+		auto x = getU32();
+
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		/*
+		s += "CCS (current connection status): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
+		s += "PES (port enable status): "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
+		s += "PSS (port suspend status): "; if (x & (1 << 2)) s += "1; "; else s += "0; ";
+		s += "POCI (port overcurrent indication): "; if (x & (1 << 3)) s += "1; "; else s += "0; ";
+		s += "PRS (port reset status): "; if (x & (1 << 4)) s += "1; "; else s += "0; ";
+		s += "PPS (port power status): "; if (x & (1 << 8)) s += "1; "; else s += "0; ";
+		s += "LSDA (low speed device attached): "; if (x & (1 << 9)) s += "1; "; else s += "0; ";
+		s += "CSC (connection status change): "; if (x & (1 << 16)) s += "1; "; else s += "0; ";
+		s += "PESC (port enable status change): "; if (x & (1 << 17)) s += "1; "; else s += "0; ";
+		s += "PSSC (port suspend status change): "; if (x & (1 << 18)) s += "1; "; else s += "0; ";
+		s += "OCIC (overcurrent indication status change): "; if (x & (1 << 19)) s += "1; "; else s += "0; ";
+		s += "PRSC (port reset status change): "; if (x & (1 << 20)) s += "1; "; else s += "0; ";
+		*/
+		s += "CCS: "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
+		s += "PES: "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
+		s += "PSS: "; if (x & (1 << 2)) s += "1; "; else s += "0; ";
+		s += "POCI: "; if (x & (1 << 3)) s += "1; "; else s += "0; ";
+		s += "PRS: "; if (x & (1 << 4)) s += "1; "; else s += "0; ";
+		s += "PPS: "; if (x & (1 << 8)) s += "1; "; else s += "0; ";
+		s += "LSDA: "; if (x & (1 << 9)) s += "1; "; else s += "0; ";
+		s += "CSC: "; if (x & (1 << 16)) s += "1; "; else s += "0; ";
+		s += "PESC: "; if (x & (1 << 17)) s += "1; "; else s += "0; ";
+		s += "PSSC: "; if (x & (1 << 18)) s += "1; "; else s += "0; ";
+		s += "OCIC: "; if (x & (1 << 19)) s += "1; "; else s += "0; ";
+		s += "PRSC: "; if (x & (1 << 20)) s += "1; "; else s += "0; ";
+		return QString("Root hub port status access, index %1: ").arg(index) + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_irq_entry(unsigned) { return "IRQ entry"; }
+	static QString log_interrupt_transfer_done(unsigned) { return "interrupt transfer done"; }
+	static QString log_root_hub_interrupt(unsigned) { return "root hub interrupt"; }
 	static QString log_reg_access_OhciInterruptDisableReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
@@ -138,16 +168,130 @@ class USBLogDecoder : public QObject
 		s += "CLF (control list filled): "; if (x & (1 << 1)) s += "yes; "; else s += "no; ";
 		s += "BLF (bulk list filled): "; if (x & (1 << 2)) s += "yes; "; else s += "no; ";
 		s += "OCR (ownership change request): "; if (x & (1 << 3)) s += "yes; "; else s += "no; ";
-		s += QString("SOC (scheduling overrun count): ").arg((x >> 16) & 3);
+		s += QString("SOC (scheduling overrun count): %1; ").arg((x >> 16) & 3);
 
 		return QString("HcCommandStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
+
+	static QString log_reg_access_OhciFmIntervalReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += QString("FI (frame interval): %1; ").arg(x & ((1 << 14) - 1));
+		s += QString("FSMPS (largest data packet - bits): %1; ").arg((x >> 16) & ((1 << 15) - 1));
+		s += "FIT (frame interval toggle): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
+		return QString("HcFmInterval: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciPeriodicStartReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += QString("PS (periodic start): %1; ").arg(x & ((1 << 14) - 1));
+		return QString("HcPeriodicStart: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciControlHeadEDReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HcControlHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciControlCurrentEDReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HcControlCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciBulkHeadEDReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HcBulkHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciBulkCurrentEDReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HcBulkCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciDoneHeadEDReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HcDoneHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciHCCAReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		return QString("HCCA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciRhDescriptorAReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += QString("NDP (number of downstream ports): %1; ").arg((x >> 0) & ((1 << 8) - 1));
+		s += "PSM (power switching mode): "; if (x & (1 << 9)) s += "each port - individually; "; else s += "all ports - together; ";
+		s += "NPS (no power switching): "; if (x & (1 << 9)) s += "ports are always powered when the HC is ON; "; else s += "ports are power switched; ";
+		s += "DT (device type): "; if (x & (1 << 10)) s += "INVALID; "; else s += "hardwired to 0; ";
+		s += "OCPM (overcurrent protection mode): "; if (x & (1 << 11)) s += "reported on a per-port basis; "; else s += "reported collectively; ";
+		s += "NOCP (no overcurrent protection): "; if (x & (1 << 11)) s += "1; "; else s += "0; ";
+		s += QString("POTPGT (power-on-to-power-good time; unit is *2 ms): %1; ").arg((x >> 24) & ((1 << 8) - 1));
+
+		return QString("HcRhDescriptorA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+	static QString log_reg_access_OhciInterruptEnableReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += "SO (scheduling overrun): "; if (x & (1 << 0)) s += "ENABLE; "; else s += "no change; ";
+		s += "WDH (HCDoneHead writeback): "; if (x & (1 << 1)) s += "ENABLE; "; else s += "no change; ";
+		s += "SF (start of frame): "; if (x & (1 << 2)) s += "ENABLE; "; else s += "no change; ";
+		s += "RD (resume detect): "; if (x & (1 << 3)) s += "ENABLE; "; else s += "no change; ";
+		s += "UE (unrecoverable error): "; if (x & (1 << 4)) s += "ENABLE; "; else s += "no change; ";
+		s += "FNO (frame number overflow): "; if (x & (1 << 5)) s += "ENABLE; "; else s += "no change; ";
+		s += "RHSC (root hub status change): "; if (x & (1 << 6)) s += "ENABLE; "; else s += "no change; ";
+		s += "OC (ownership change): "; if (x & (1 << 30)) s += "ENABLE; "; else s += "no change; ";
+		s += "MIE (master interrupt enable): "; if (x & (1 << 31)) s += "ENABLE; "; else s += "no change; ";
+
+		return QString("HcInterruptEnable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+
+	static QString log_reg_access_OhciRhStatusReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += "LPS (local power status): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
+		s += "OCI (overcurrent indicator): "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
+		s += "DRWE (device remote wakeup enable): "; if (x & (1 << 15)) s += "1; "; else s += "0; ";
+		s += "LPSC (local power status change): "; if (x & (1 << 16)) s += "1; "; else s += "0; ";
+		s += "OCIC (overcurrent indicator change): "; if (x & (1 << 17)) s += "1; "; else s += "0; ";
+		s += "CRWE (clear remote wakeup enable): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
+		return QString("HcRhStatus (see manual): ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+
+	static QString log_reg_access_OhciInterruptStatusReg(unsigned prefix_byte)
+	{
+		uint32_t x = getU32();
+		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+		s += "SO (scheduling overrun): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
+		s += "WDH (HCDoneHead writeback): "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
+		s += "SF (start of frame): "; if (x & (1 << 2)) s += "1; "; else s += "0; ";
+		s += "RD (resume detect): "; if (x & (1 << 3)) s += "1; "; else s += "0; ";
+		s += "UE (unrecoverable error): "; if (x & (1 << 4)) s += "1; "; else s += "0; ";
+		s += "FNO (frame number overflow): "; if (x & (1 << 5)) s += "1; "; else s += "0; ";
+		s += "RHSC (root hub status change): "; if (x & (1 << 6)) s += "1; "; else s += "0; ";
+		s += "OC (ownership change): "; if (x & (1 << 30)) s += "1; "; else s += "0; ";
+		s += "MIE (master interrupt enable): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
+
+		return QString("HcInterruptStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+	}
+
 	static QString log_reg_access_template(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		s += "XXX: "; if (x & (1 << 31)) s += "XXX; "; else s + "YYY";
-		return QString("XXX: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		s += "FIELDNAME: "; if (x & (1 << 31)) s += "XXX; "; else s += "YYY; ";
+		return QString("REGNAME: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_irq_exit(unsigned) { return "IRQ exit"; }
@@ -184,7 +328,7 @@ getByte_socket();
 
 	static uint32_t getU32(void) { return getByte() | (getByte() << 8) | (getByte() << 16) | (getByte() << 24); }
 	static QString dummy(unsigned prefix_byte) { return QString("UNKNOWN PACKET: %1").arg(prefix_byte, 2, 16, QChar('0')); }
-	static QString dummy_register_io_packet(unsigned prefix_byte) { getU32(); return QString("register access: %1").arg(prefix_byte, 2, 16, QChar('0')); }
+	static QString dummy_register_io_packet(unsigned prefix_byte) { getU32(); return QString("register access: $%1").arg(prefix_byte, 2, 16, QChar('0')); }
 	static QString dump_hcca(unsigned prefix_byte)
 	{
 		int i;
