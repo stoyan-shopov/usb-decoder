@@ -413,13 +413,18 @@ getByte_socket();
 		return QString("HCCA load");
 	}
 	static QString log_transfer_descriptor(unsigned prefix_byte)
-{ getU32(), getU32(), getU32(), getU32();
+{
+	uint32_t td[4] = { getU32(), getU32(), getU32(), getU32(), };
+	QString hwdesc("hardware descriptor fields: ");
+	hwdesc += QString("flags: $%1; ").arg(td[0], 8, 16, QChar('0'));
+	hwdesc += QString("CBP: $%1; ").arg(td[1], 8, 16, QChar('0'));
+	hwdesc += QString("NextTD: $%1; ").arg(td[2], 8, 16, QChar('0'));
+	hwdesc += QString("BE: $%1; ").arg(td[3], 8, 16, QChar('0'));
 	int x = getU32(), i = x;
-	qDebug() << i;
 	QByteArray data;
 	while (i --)
 		data.append(getByte());
-return QString("transfer descriptor ready, #%1 bytes in transfer:\n").arg(x) + data.toHex(); }
+return QString("transfer descriptor ready:\n%1\n; #%2 bytes in transfer:\n").arg(hwdesc).arg(x) + data.toHex(); }
 	static QString (*decoders[255])(unsigned prefix_byte);
 
 public slots:
