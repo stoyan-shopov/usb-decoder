@@ -88,6 +88,10 @@ class USBLogDecoder : public QObject
 		auto index = getByte();
 		auto x = getU32();
 
+		QString fc = QString("ohci HcRhPortStatus %1 cells + + ").arg(index);
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		/*
 		s += "CCS (current connection status): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
@@ -115,7 +119,7 @@ class USBLogDecoder : public QObject
 		s += "PSSC: "; if (x & (1 << 18)) s += "1; "; else s += "0; ";
 		s += "OCIC: "; if (x & (1 << 19)) s += "1; "; else s += "0; ";
 		s += "PRSC: "; if (x & (1 << 20)) s += "1; "; else s += "0; ";
-		return QString("Root hub port status access, index %1: ").arg(index) + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("Root hub port status access, index %1: ").arg(index) + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_irq_entry(unsigned) { return "IRQ entry"; }
@@ -124,6 +128,11 @@ class USBLogDecoder : public QObject
 	static QString log_reg_access_OhciInterruptDisableReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcInterruptDisable");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		if (x & (1 << 0)) s += "SO - disable scheduling overrun interrupt; ";
 		if (x & (1 << 1)) s += "WDH - disable DoneHead Writeback interrupt; ";
@@ -134,12 +143,16 @@ class USBLogDecoder : public QObject
 		if (x & (1 << 6)) s += "RHSC - disable root hub status change interrupt; ";
 		if (x & (1 << 30)) s += "OC - disable ownership change interrupt; ";
 		if (x & (1 << 31)) s += "MIE - MASTER INTERRUPT DISABLE; ";
-		return QString("HcInterruptDisable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcInterruptDisable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciControlReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+
+		QString fc = QString("ohci %1 + ").arg("HcControl");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
 
 		s += QString("CBSR (control-to-bulk service ration): %1; ").arg(x & 3);
 		s += "PLE: "; if (x & (1 << 2)) s += "periodic list enabled; "; else s += "periodic list disabled; ";
@@ -157,12 +170,16 @@ class USBLogDecoder : public QObject
 		s += "IR (interrupt routing): "; if (x & (1 << 8)) s += "SMM; "; else s += "none; ";
 		s += "RWC (remote wakeup connected): "; if (x & (1 << 9)) s += "yes; "; else s += "no; ";
 		s += "RWE (remote wakeup enable): "; if (x & (1 << 10)) s += "yes; "; else s += "no; ";
-		return QString("HcControl: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcControl: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciCommandStatusReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
+
+		QString fc = QString("ohci %1 + ").arg("HcCommandStatus");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
 
 		s += "HCR (host controller reset): "; if (x & (1 << 0)) s += "RESET ON; "; else s += "0; ";
 		s += "CLF (control list filled): "; if (x & (1 << 1)) s += "yes; "; else s += "no; ";
@@ -170,64 +187,109 @@ class USBLogDecoder : public QObject
 		s += "OCR (ownership change request): "; if (x & (1 << 3)) s += "yes; "; else s += "no; ";
 		s += QString("SOC (scheduling overrun count): %1; ").arg((x >> 16) & 3);
 
-		return QString("HcCommandStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcCommandStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_reg_access_OhciFmIntervalReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcFmInterval");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += QString("FI (frame interval): %1; ").arg(x & ((1 << 14) - 1));
 		s += QString("FSMPS (largest data packet - bits): %1; ").arg((x >> 16) & ((1 << 15) - 1));
 		s += "FIT (frame interval toggle): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
-		return QString("HcFmInterval: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcFmInterval: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciPeriodicStartReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcPeriodicStart");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += QString("PS (periodic start): %1; ").arg(x & ((1 << 14) - 1));
-		return QString("HcPeriodicStart: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcPeriodicStart: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciControlHeadEDReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcControlHeadED");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HcControlHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcControlHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciControlCurrentEDReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcControlCurrentED");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HcControlCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcControlCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciBulkHeadEDReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcBulkHeadED");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HcBulkHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcBulkHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciBulkCurrentEDReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcBulkCurrentED");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HcBulkCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcBulkCurrentED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciDoneHeadEDReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcDoneHead");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HcDoneHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcDoneHeadED: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciHCCAReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcHCCA");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
-		return QString("HCCA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HCCA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciRhDescriptorAReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcRhDescriptorA");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += QString("NDP (number of downstream ports): %1; ").arg((x >> 0) & ((1 << 8) - 1));
 		s += "PSM (power switching mode): "; if (x & (1 << 9)) s += "each port - individually; "; else s += "all ports - together; ";
@@ -237,11 +299,16 @@ class USBLogDecoder : public QObject
 		s += "NOCP (no overcurrent protection): "; if (x & (1 << 11)) s += "1; "; else s += "0; ";
 		s += QString("POTPGT (power-on-to-power-good time; unit is *2 ms): %1; ").arg((x >> 24) & ((1 << 8) - 1));
 
-		return QString("HcRhDescriptorA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcRhDescriptorA: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 	static QString log_reg_access_OhciInterruptEnableReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcInterruptEnable");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += "SO (scheduling overrun): "; if (x & (1 << 0)) s += "ENABLE; "; else s += "no change; ";
 		s += "WDH (HCDoneHead writeback): "; if (x & (1 << 1)) s += "ENABLE; "; else s += "no change; ";
@@ -253,12 +320,17 @@ class USBLogDecoder : public QObject
 		s += "OC (ownership change): "; if (x & (1 << 30)) s += "ENABLE; "; else s += "no change; ";
 		s += "MIE (master interrupt enable): "; if (x & (1 << 31)) s += "ENABLE; "; else s += "no change; ";
 
-		return QString("HcInterruptEnable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcInterruptEnable: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_reg_access_OhciRhStatusReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcRhStatus");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += "LPS (local power status): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
 		s += "OCI (overcurrent indicator): "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
@@ -266,12 +338,17 @@ class USBLogDecoder : public QObject
 		s += "LPSC (local power status change): "; if (x & (1 << 16)) s += "1; "; else s += "0; ";
 		s += "OCIC (overcurrent indicator change): "; if (x & (1 << 17)) s += "1; "; else s += "0; ";
 		s += "CRWE (clear remote wakeup enable): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
-		return QString("HcRhStatus (see manual): ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcRhStatus (see manual): ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_reg_access_OhciInterruptStatusReg(unsigned prefix_byte)
 	{
 		uint32_t x = getU32();
+
+		QString fc = QString("ohci %1 + ").arg("HcInterruptStatus");
+		if (prefix_byte & 1) fc += "@ "; else fc = QString("$%1 ").arg(x, 8, 16, QChar('0')) + fc + "! ";
+		fc += "\t\t\\ ";
+
 		QString s(QString("$%1: ").arg(x, 8, 16, QChar('0')));
 		s += "SO (scheduling overrun): "; if (x & (1 << 0)) s += "1; "; else s += "0; ";
 		s += "WDH (HCDoneHead writeback): "; if (x & (1 << 1)) s += "1; "; else s += "0; ";
@@ -283,7 +360,7 @@ class USBLogDecoder : public QObject
 		s += "OC (ownership change): "; if (x & (1 << 30)) s += "1; "; else s += "0; ";
 		s += "MIE (master interrupt enable): "; if (x & (1 << 31)) s += "1; "; else s += "0; ";
 
-		return QString("HcInterruptStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
+		return fc + QString("HcInterruptStatus: ") + ((prefix_byte & 1) ? "read " : "write ") + ": " + s;
 	}
 
 	static QString log_reg_access_template(unsigned prefix_byte)
